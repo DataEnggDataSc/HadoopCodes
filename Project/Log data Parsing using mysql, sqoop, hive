@@ -1,0 +1,42 @@
+MySQL:
+CREATE TABLE Logs(
+logdate varchar(10),
+jobname varchar(10),
+jobstep varchar(10),
+status varchar(10),
+error_message varchar(50));
+
+insert into Logs values('01-04-2020','JobA','Step1','Success','');
+insert into Logs values('01-04-2020','JobA','Step2','Success','');
+insert into Logs values('31-03-2020','JobA','Step1','Success','');
+insert into Logs values('31-03-2020','JobA','Step2','Fail','Division by zero');
+insert into Logs values('31-03-2020','JobB','Step1','Fail','Column datatype mismatch');
+
+Hive:
+CREATE EXTERNAL TABLE Logs_hive(
+    logdate string,
+    jobname string,
+    jobstep string,
+    status string,
+    error_message string)    
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE LOCATION '/user/dataenggdatascfreelance1247/logs';
+
+CREATE TABLE logs_aggregate
+(
+logdate DATE,
+jobname STRING,
+status STRING,
+status_count INT)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ',';
+
+INSERT INTO logs_aggregate 
+SELECT to_date(from_unixtime(UNIX_TIMESTAMP(logdate,'dd-MM-yyyy'))),jobname,status,count(*)
+FROM Logs_hive
+GROUP BY logdate,jobname,status;  
+
+Hadoop:
+hadoop fs -mkdir /user/dataenggdatascfreelance1247/logs
+sqoop import --connect "jdbc:mysql://cxln2.c.thelab-240901.internal/sqoopex" --username sqoopuser --password NHkkP876rp --table Logs --target-dir="/user/dataenggdatascfreelance1247/logs" --num-mappers 1
